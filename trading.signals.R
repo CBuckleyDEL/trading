@@ -1,9 +1,6 @@
-
 library("quantmod")
 library("PerformanceAnalytics")
 library("TTR")
-
-setwd("D:/stock algorithms")
 
 # References
 # http://stackoverflow.com/questions/16964341/r-backtesting-a-trading-strategy-beginners-to-quantmod-and-r
@@ -11,9 +8,6 @@ setwd("D:/stock algorithms")
 # DOW Jones ticker list : http://finance.yahoo.com/q/cp?s=%5EDJI+Components
 
 # Load a file of stocks and buy/sell orders with timestamp
-
-ptm <- proc.time() #time the process
-
 
 process.stock<-function(stock){
   data<-getSymbols(stock,src="yahoo", auto.assign=F) # from yahoo finance 
@@ -46,21 +40,25 @@ process.stock<-function(stock){
   plot(tail(gk.vol,100))
   
   # Bollinger Bands
-  BB.20=BBands(data, n = 20, maType, sd = 2, ...)
- 
+  BB.20=BBands(data[,2:4], n = 20, sd = 2)
+  
   
   # combine all the indicators
-  output.table<-cbind(adj.close, volume, EMA.10, EMA.30, SMA.10, SMA.30, VWAP.10)
-  
-    # Define strategy
-  output.table$position <- ifelse(adj.close>SMA.30 , 1 , 0)
-  
+  output.table<-cbind(adj.close, volume, EMA.10, EMA.30, SMA.10, SMA.30, VWAP.10, BB.20)
+
   colnames(output.table)=c("adj.close", "volume", 
                            "EMA.10", "EMA.30", 
                            "SMA.10", "SMA.30",
-                           "VWAP", "position")
+                           "VWAP","BB.20.down", "BB.20.mavg", "BB.20.up", "BB.20.pctB")
 
-  myReturn <- lag(output.table$position) * dailyReturn(output.table$adj.close)
+  # Define strategy
+  
+  output.table$SMA.position <- ifelse(adj.close>output.table$SMA.30 , 1 , 0)
+  output.table$BB.20.position <- ifelse(adj.close<output.table$BB.20.down , 1 , 0) # less than BB.20, buy
+  
+  tail(output.table)
+  
+  myReturn <- lag(output.table$SMA.position) * dailyReturn(output.table$adj.close)
   
   charts.PerformanceSummary(cbind(dailyReturn(output.table$adj.close),myReturn))
   
@@ -87,5 +85,3 @@ managers[ trailing36.rows, Rf.col, drop=FALSE])
 # optimize allocation
 
 # portfolio TTR
-
-
