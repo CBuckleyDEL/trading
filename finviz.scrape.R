@@ -23,6 +23,18 @@ process.fin.data<-function(stock){
 
 # PASS A VECTOR OF STOCKS
 output<-rbind(process.fin.data("AAPL"),
-              process.fin.data("SIRI"))
+              process.fin.data("BAX"),
+              process.fin.data("DE"),
+              process.fin.data("JNK"),
+              process.fin.data("IP"),
+              process.fin.data("PG"),
+              process.fin.data("AMZN"),
+              process.fin.data("MCD"),
+              process.fin.data("F"),
+              process.fin.data("JNJ"),
+              process.fin.data("BMY"),
+              process.fin.data("SIRI"),
+              process.fin.data("KO"))
 
-rownames(output)<-c("AAPL", "SIRI")
+rownames(output)<-c("AAPL", "BAX", "DE", "JNK", "IP", "PG", 
+                    "AMZN", "MCD", "F", "JNJ", "BMY","SIRI", "KO")
