@@ -2,6 +2,11 @@ library("quantmod")
 library("PerformanceAnalytics")
 library("TTR")
 library("gridExtra")
+library("data.table")
+library("PerformanceAnalytics")
+
+setwd("/Users/shawnpope/Desktop/stocks")
+
 
 # References
 # http://stackoverflow.com/questions/16964341/r-backtesting-a-trading-strategy-beginners-to-quantmod-and-r
@@ -9,6 +14,8 @@ library("gridExtra")
 # DOW Jones ticker list : http://finance.yahoo.com/q/cp?s=%5EDJI+Components
 
 # Load a file of stocks and buy/sell orders with timestamp
+
+sp500.close<-getSymbols("^GSPC",src="yahoo", auto.assign=F)[,6] # from yahoo finance 
 
 process.stock<-function(stock){
   data<-getSymbols(stock,src="yahoo", auto.assign=F) # from yahoo finance 
@@ -21,8 +28,8 @@ process.stock<-function(stock){
   close<-data[,4]
   
   cat("Data from: ",  
-      as.character(time(last(adj.close))), " | ",
-      as.character(time(first(adj.close))), "\n")
+      as.character(time(first(adj.close))), " | ",
+      as.character(time(last(adj.close))), "\n")
   
   # Moving Averages
   EMA.10=EMA(adj.close, n = 10)
@@ -40,19 +47,34 @@ process.stock<-function(stock){
   gk.vol   =volatility(data, n = 10, calc = "garman.klass", N = 260)
   rs.vol   =volatility(data, n = 10, calc = "rogers.satchell", N = 260)
   
-  
   # Bollinger Bands
   BB.20=BBands(data[,2:4], n = 20, sd = 2)
+  
+  # ROC
+  ROC.10=ROC(adj.close, 10)*100
+  
+  abline(h=10,col=4,lty=2)
+  abline(h=-10,col=3,lty=2)
+  
+  # Performance Analytics
+  # CAPM/Risk
+  CAPM.beta(dailyReturn(output.table$adj.close), dailyReturn(sp500.close), Rf=.01/12)
+  CAPM.alpha(dailyReturn(output.table$adj.close), dailyReturn(sp500.close), Rf=.01/12)
+  CAPM.epsilon(dailyReturn(output.table$adj.close), dailyReturn(sp500.close), Rf=.01/12)
+  
+  SystematicRisk(dailyReturn(output.table$adj.close), dailyReturn(sp500.close))
+    SpecificRisk(dailyReturn(output.table$adj.close), dailyReturn(sp500.close))
+
   
   
   # combine all the indicators
   output.table<-cbind(adj.close, volume, EMA.10, EMA.30, EMA.50, EMA.100,
-                      SMA.10, SMA.30, VWAP.10, BB.20)
+                      SMA.10, SMA.30, VWAP.10, BB.20, ROC.10)
 
   colnames(output.table)=c("adj.close", "volume", 
                            "EMA.10", "EMA.30", "EMA.50", "EMA.100",
                            "SMA.10", "SMA.30",
-                           "VWAP","BB.20.down", "BB.20.mavg", "BB.20.up", "BB.20.pctB")
+                           "VWAP","BB.20.down", "BB.20.mavg", "BB.20.up", "BB.20.pctB", "ROC.10")
 
   # Define strategy
   output.table$EMA.10.position <- ifelse(adj.close>output.table$EMA.10 , 1 , 0)
@@ -64,6 +86,20 @@ process.stock<-function(stock){
   output.table$SMA.30.position <- ifelse(adj.close>output.table$SMA.30 , 1 , 0)
   
   output.table$BB.20.position <- ifelse(adj.close<output.table$BB.20.down , 1 , 0) # less than BB.20, buy
+  output.table$ROC.10.position <- ifelse(6<=output.table$ROC.10 , 1 , 0) # ROC more than 6 (price is increasing), buy
+  
+  
+  
+  # DETERMINE THE LAST TIME THAT THE TRADE WAS PUT ON 
+  dim(output.table)
+  colnames(output.table)
+  # make this into a function for each trading signal
+  # Generate last two trades for each signal
+  # write this to a .html file
+  last(output.table$SMA.10.position[which(output.table$SMA.10.position+lag(output.table$SMA.10.position)==1)],2)
+  last(output.table$SMA.30.position[which(output.table$SMA.30.position+lag(output.table$SMA.30.position)==1)],2)
+  last(output.table$BB.20.position[which(output.table$BB.20.position+lag(output.table$BB.20.position)==1)],2)
+  
   
   
   # calculate returns for each strategy
@@ -77,6 +113,8 @@ process.stock<-function(stock){
   SMA.30.return <- lag(output.table$SMA.30.position) * dailyReturn(output.table$adj.close)
 
   BB.20.return <- lag(output.table$BB.20.position) * dailyReturn(output.table$adj.close)
+  ROC.10.return <- lag(output.table$ROC.10.position) * dailyReturn(output.table$adj.close)
+  
   
   # Remove NA's from the xts signals
   EMA.10.return=EMA.10.return[!is.na(EMA.10.return)] 
@@ -87,6 +125,7 @@ process.stock<-function(stock){
   SMA.10.return=SMA.10.return[!is.na(SMA.10.return)] 
   SMA.30.return=SMA.30.return[!is.na(SMA.30.return)] 
   BB.20.return=BB.20.return[!is.na(BB.20.return)] 
+  ROC.10.return=ROC.10.return[!is.na(ROC.10.return)]
   
   #------------------------------------
   # Calculate Returns
@@ -100,17 +139,38 @@ process.stock<-function(stock){
   month.SMA.30<-sum(tail(SMA.30.return,20))
   
   month.BB.20<-sum(tail(BB.20.return,20))
+  month.ROC.10<-sum(tail(ROC.10.return,20))
   
-
+  # Results Output
+  monthly.returns<-c(month.EMA.10, month.EMA.30, month.EMA.50, month.EMA.100, 
+                     month.SMA.10, month.SMA.30,
+                     month.BB.20, month.ROC.10)
+  
+  cat("Highest Return \n")
+  cat(c("EMA.10", "EMA.30", "EMA.50", "EMA.100", "SMA.10", "SMA.30", "BB.20", "ROC.10")[which.max(monthly.returns)], " ", max(monthly.returns), "\n")
+  
+  
   #------------------------------------
   # PLOTS
   # produce a ggplot barplot for each signals last month returns
-  monthly.returns<-c(month.EMA.10, month.EMA.30, month.EMA.50, month.EMA.100, 
-                     month.SMA.10, month.SMA.30,
-                     month.BB.20)
   
-  barplot(monthly.returns, main="Monthly Returns", xlab="Strategies",
-          names.arg=c("EMA.10", "EMA.30", "EMA.50", "EMA.100", "SMA.10", "SMA.30", "BB.20"))
+  jpeg(paste(stock, " rplot.jpg", sep=""), width = 600, height = 480)
+  
+    par(mfrow=c(2,2))
+    barplot(monthly.returns, main="Monthly Returns", xlab="Strategies",
+          names.arg=c("EMA.10", "EMA.30", "EMA.50", "EMA.100", "SMA.10", "SMA.30", "BB.20", "ROC.10"))
+  
+    plot(last(adj.close, "4 months"), main="Last Month Price")
+      lines(SMA.30, col=3)
+      lines(SMA.10, col=4)
+  
+  
+    plot(adj.close)
+    plot(ROC(adj.close, 10)*100)
+  
+  
+  dev.off()
+  
   
   # produce a .pdf report with gridExtra for each stock that is analyzed
   
@@ -123,25 +183,21 @@ process.stock<-function(stock){
   # grid.arrange(p1, arrangeGrob( p3, ncol=1), ncol=2, widths=c(1,1.2))
   
   # Index on this year and sum the returns to get the difference
-  
   # Run portfolio Analytics on this to get drawdowns, etc.....
   
   cat(stock, ": finished processing")
-  return(output.table)
+  # return(output.table)
   
   
 }
 
-AAPL<-process.stock("AAPL")
+process.stock("AAPL")
+process.stock("SIRI")
+process.stock("ORCL")
+
 
 # shorten time frame
 
 
-table.Stats(test[,1:6])
-managers[ trailing36.rows, Rf.col, drop=FALSE])
-
-
-
-# optimize allocation
-
-# portfolio TTR
+table.Stats(dailyReturn(output.table$adj.close))
+table.Stats(dailyReturn(sp500.close))
