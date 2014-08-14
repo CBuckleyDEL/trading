@@ -9,6 +9,8 @@
 # Calculate the total return of the portfolio over the time period
 # store return and resample portfolio
 # aggregate/plot/and determine the 5% time period VaR
+# compare with VaR function from 
+# http://braverock.com/brian/R/PerformanceAnalytics/html/VaR.html
 
 
 require(MASS)
