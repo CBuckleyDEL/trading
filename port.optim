@@ -1,0 +1,101 @@
+# Portfolio Optimization script
+# 8/10/2014
+library(PerformanceAnalytics)
+library(quantmod)
+library(stockPortfolio)
+library(quadprog)
+library(DEoptim)
+library(tawny)
+library(xts)
+library(sendmailR)
+library(tseries)
+
+# http://cran.r-project.org/web/packages/DEoptim/vignettes/DEoptimPortfolioOptimization.pdf
+# ETFs and Index Portfolios
+
+# TLT: iShares 20+ Year Treasury Bond (TLT)
+# need to add short term treasuries
+# jnk and sjnk etfs
+# U.S. Large Caps (SPY)  1.00%
+# U.S. Mid Caps (MDY)	0.86%
+# U.S. Small Caps (IWM)	0.84%
+# Global Developed Markets (EFA)	0.52%
+# Global Emerging Markets (VWO)	1.12%
+# Corporate Bonds (LQD)	-0.03%
+# Gold (GLD)	-0.06%
+# Oil (USO)	-0.11%
+# Real Estate (VNQ)	0.62%
+
+
+# SPDR ETFS
+# XLF : Financial Select Sector
+# XLV : Healthcare
+# XLE : Energy Select Sector
+# XLB : Materials Select Sector
+
+tickers<-c("ORCL", "DE", "SIRI", "AAPL", "TLT", "SPY", "LQD", "XLF", "XLV", "XLE", "XLB")
+getSymbols(tickers,src="yahoo", auto.assign=T)
+
+# calculate returns
+Data.daily<-cbind(dailyReturn(TLT[,6]),
+            dailyReturn(LQD[,6]),
+            dailyReturn(SPY[,6]),
+            dailyReturn(XLF[,6]),
+            dailyReturn(XLV[,6]),
+            dailyReturn(XLE[,6]),
+            dailyReturn(XLB[,6]))
+
+colnames(Data.daily)=c("TLT","LQD","SPY","XLF","XLV","XLE","XLB")
+
+recent.time=index(last(Data.daily))
+start.time=index(first(Data.daily) )
+
+
+
+Data.monthly<-cbind(monthlyReturn(TLT[,6]),
+                  monthlyReturn(LQD[,6]),
+                  monthlyReturn(SPY[,6]),
+                  monthlyReturn(XLF[,6]),
+                  monthlyReturn(XLV[,6]),
+                  monthlyReturn(XLE[,6]),
+                  monthlyReturn(XLB[,6]))
+
+
+dates=index(quarterlyReturn(XLB[,6]))
+securities=length(quarterlyReturn(XLB[,6]))
+weights=xts(matrix(rep(1/securities, length(dates)*securities), ncol=securities), order.by=dates)
+colnames(weights)=colnames(Data.monthly)
+
+
+colnames(Data)=tickers
+
+
+table.AnnualizedReturns(Data, Rf=0, scale=252, digits=3)
+
+
+# Perform Optimization
+mu <- matrix(colMeans(Data.daily), nrow=1)*100
+rcov <- cov(Data.daily)
+
+
+# Simple Mean / Variance optimization
+p.optimize(h, c.denoised)
+
+# what is an acceptable level of return to optimize towards??
+# benchmarked on the DOW?/SP500
+target.return = mean(mu)
+port.sol = portfolio.optim(x = mu, pm = target.return,
+                             covmat = rcov, shorts = F, reslow = rep(0,ncol(Data.daily)), reshigh = rep(0.2, ncol(Data.daily)))
+
+
+w = round(as.numeric(format(as.numeric(port.sol$pw), scientific = FALSE)),4)
+names(w)=c("TLT","LQD","SPY","XLF","XLV","XLE","XLB")
+
+# Solution to Optimization
+# adjust the constraints
+cat("Mean Variance weights are: \n")
+w[w!=0]
+cat("based on equal weighted cov matrix from: ",as.character(start.time), " to ", as.character(recent.time), "\n")
+
+
+
