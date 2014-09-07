@@ -37,13 +37,13 @@ tickers<-c("ORCL", "DE", "SIRI", "AAPL", "TLT", "SPY", "LQD", "XLF", "XLV", "XLE
 getSymbols(tickers,src="yahoo", auto.assign=T)
 
 # calculate returns
-Data.daily<-cbind(dailyReturn(TLT[,6]),
-            dailyReturn(LQD[,6]),
-            dailyReturn(SPY[,6]),
-            dailyReturn(XLF[,6]),
-            dailyReturn(XLV[,6]),
-            dailyReturn(XLE[,6]),
-            dailyReturn(XLB[,6]))
+Data.daily<-xts(cbind(dailyReturn(TLT[,6]),
+                dailyReturn(LQD[,6]),
+                dailyReturn(SPY[,6]),
+                dailyReturn(XLF[,6]),
+                dailyReturn(XLV[,6]),
+                dailyReturn(XLE[,6]),
+                dailyReturn(XLB[,6])), order.by=index(TLT))
 
 colnames(Data.daily)=c("TLT","LQD","SPY","XLF","XLV","XLE","XLB")
 
@@ -76,6 +76,8 @@ table.AnnualizedReturns(Data, Rf=0, scale=252, digits=3)
 # Perform Optimization
 mu <- matrix(colMeans(Data.daily), nrow=1)*100
 rcov <- cov(Data.daily)
+recent.cov <- cov(Data.daily["2014/"])
+
 
 
 # Simple Mean / Variance optimization
@@ -97,5 +99,21 @@ cat("Mean Variance weights are: \n")
 w[w!=0]
 cat("based on equal weighted cov matrix from: ",as.character(start.time), " to ", as.character(recent.time), "\n")
 
+
+# Most Recent matrix portfolio optimization 
+
+target.return = mean(mu)
+port.sol = portfolio.optim(x = mu, pm = target.return,
+                           covmat = recent.cov, shorts = F, reslow = rep(0,ncol(Data.daily)), reshigh = rep(0.2, ncol(Data.daily)))
+
+
+w = round(as.numeric(format(as.numeric(port.sol$pw), scientific = FALSE)),4)
+names(w)=c("TLT","LQD","SPY","XLF","XLV","XLE","XLB")
+
+# Solution to Optimization
+# adjust the constraints
+cat("Mean Variance weights are: \n")
+w[w!=0]
+cat("based YTD equal weighted cov matrix \n")
 
 
