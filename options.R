@@ -24,6 +24,52 @@ source("stock.functions.R")
 
 rm(list = ls())
 
+## Black-Scholes Function
+BS <-
+  function(S, K, T, r, sig, type="C"){
+    d1 <- (log(S/K) + (r + sig^2/2)*T) / (sig*sqrt(T))
+    d2 <- d1 - sig*sqrt(T)
+    if(type=="C"){
+      value <- S*pnorm(d1) - K*exp(-r*T)*pnorm(d2)
+    }
+    if(type=="P"){
+      value <- K*exp(-r*T)*pnorm(-d2) - S*pnorm(-d1)
+    }
+    return(value)
+  }
+
+
+## Function to find BS Implied Vol using Bisection Method
+implied.vol <-
+  function(S, K, T, r, market, type){
+    sig <- 0.20
+    sig.up <- 1
+    sig.down <- 0.001
+    count <- 0
+    err <- BS(S, K, T, r, sig, type) - market 
+    
+    ## repeat until error is sufficiently small or counter hits 1000
+    while(abs(err) > 0.00001 && count<1000){
+      if(err < 0){
+        sig.down <- sig
+        sig <- (sig.up + sig)/2
+      }else{
+        sig.up <- sig
+        sig <- (sig.down + sig)/2
+      }
+      err <- BS(S, K, T, r, sig, type) - market
+      count <- count + 1
+    }
+    
+    ## return NA if counter hit 1000
+    if(count==1000){
+      return(NA)
+    }else{
+      return(sig)
+    }
+  }
+
+
 return.option<-function(ticker){
   
   # Calculate the dates of the 3rd Friday of the month
@@ -85,25 +131,27 @@ data<-return.option("AAPL")
 calls<-data$calls[data$calls$calls.OI>10,]
 puts<-data$puts[data$puts$puts.OI>10,]
 
+head(calls)
+head(puts)
 # subset the calls and puts
+# subset on NA values (use complete cases)
+# subset on near the money -+ 20% of Last.Price
 # select upcoming options and ones near the money
-
-
-puts<-data$puts
-
 
 
 # Calculate Implied Volatility - need to compare against actual vol (30days prices)
 T=as.numeric(as.Date(calls$Friday.date[100], format="%Y-%m-%d")-Sys.Date())
 S=calls$Stock.Price[100]
 K=calls$calls.Strike[100]
+K=100
 r=0.0025
 market=calls$calls.Last[100]
 type="C"
 
-implied.vol(S, K, T, r, market, type)
+# apply function across all rows
+implied.vol(S, K, days, r, market, type)
 
-implied.vol(S=535.96, K=550, T=65, r=0.25, market=25.47, type="C")
+
 
 data<-return.option("AA")
 calls<-data$calls
@@ -112,7 +160,7 @@ puts<-data$puts
 
 
 #--------------------------------------------------------
-
+# Plot some stuff
 
 
 plot(options$calls$Strike, options$calls$Last, type="l", col=2)
