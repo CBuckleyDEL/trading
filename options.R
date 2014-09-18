@@ -122,6 +122,10 @@ return.option<-function(ticker){
   calls$Moneyness=apply(cbind(calls$Last-calls$calls.Strike, 0), 1, max) 
   puts$Moneyness=apply(cbind(puts$Last-puts$puts.Strike, 0), 1, max) 
   
+  # do an if then, if mid.price=NA then use calls.Last else use Option.Price.Mid
+  calls$Profit=100*(-calls$Last+calls$calls.Strike+calls$calls.Last)/calls$Last
+  puts$Profit=100*(-puts$Last+puts$puts.Strike+puts$puts.Last)/puts$Last
+  
   # merge the calls and puts together in 1 dataframe
   return(list(calls=calls, puts=puts))
 }
@@ -129,12 +133,17 @@ return.option<-function(ticker){
 
 data<-return.option("AAPL")
 calls<-data$calls[data$calls$calls.OI>10,]
+# calls<-data$calls[complete.cases(data$calls),]
+head(calls)
+
 puts<-data$puts[data$puts$puts.OI>10,]
+puts<-data$puts[complete.cases(data$puts),]
+# filter on near the money
+calls$Moneyness/calls$Last
 
 head(calls)
 head(puts)
-# subset the calls and puts
-# subset on NA values (use complete cases)
+
 # subset on near the money -+ 20% of Last.Price
 # select upcoming options and ones near the money
 
