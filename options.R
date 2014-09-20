@@ -10,8 +10,6 @@ library(RQuantLib)
 library(zoo)
 library(timeDate)
 
-setwd("D:/stock algorithms")
-source("stock.functions.R")
 # greeks(488.59,490,0.04,0.025,23,.3)
 
 # greeks<-function(S,X,b,r,Time,v)
@@ -126,6 +124,14 @@ return.option<-function(ticker){
   calls$Profit=100*(-calls$Last+calls$calls.Strike+calls$calls.Last)/calls$Last
   puts$Profit=100*(-puts$Last+puts$puts.Strike+puts$puts.Last)/puts$Last
   
+  calls$days.expire=as.integer(as.Date(calls$Friday.date, format="%Y-%m-%d")-Sys.Date())
+  puts$days.expire=as.integer(as.Date(puts$Friday.date, format="%Y-%m-%d")-Sys.Date())
+  
+  # calculate annualized profit
+  calls$Ann.Profit=(100*(-calls$Last+calls$calls.Strike+calls$calls.Last)/calls$Last)/(calls$days.expire/365)
+  puts$Ann.Profit=(100*(-puts$Last+puts$puts.Strike+puts$puts.Last)/puts$Last)/(puts$days.expire/365)
+  
+  
   # merge the calls and puts together in 1 dataframe
   return(list(calls=calls, puts=puts))
 }
@@ -133,8 +139,12 @@ return.option<-function(ticker){
 
 data<-return.option("AAPL")
 calls<-data$calls[data$calls$calls.OI>10,]
-# calls<-data$calls[complete.cases(data$calls),]
-head(calls)
+#subset within 5 percent of current share price
+percent.near=0.05
+calls<-subset(calls, calls.Strike>=Last-percent.near*Last & calls.Strike<=Last+percent.near*Last)
+head(calls, 10)
+
+days.expire<-as.integer(option.expire-Sys.Date())
 
 puts<-data$puts[data$puts$puts.OI>10,]
 puts<-data$puts[complete.cases(data$puts),]
