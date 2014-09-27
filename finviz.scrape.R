@@ -1,4 +1,3 @@
-library(XML)
 
 process.fin.data<-function(stock){
   
@@ -34,7 +33,14 @@ output<-rbind(process.fin.data("AAPL"),
               process.fin.data("JNJ"),
               process.fin.data("BMY"),
               process.fin.data("SIRI"),
-              process.fin.data("KO"))
+              process.fin.data("KO"),
+              process.fin.data("XLF"),
+              process.fin.data("XLV"),
+              process.fin.data("XLE"),
+              process.fin.data("XLB")
+              )
 
 rownames(output)<-c("AAPL", "BAX", "DE", "JNK", "IP", "PG", 
-                    "AMZN", "MCD", "F", "JNJ", "BMY","SIRI", "KO")
+                    "AMZN", "MCD", "F", "JNJ", "BMY","SIRI", "KO", "XLF", "XLV", "XLE", "XLB")
+
+print(xtable(output), type="html", file="example.html")
