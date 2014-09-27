@@ -2,13 +2,6 @@
 # author: Shawn Pope
 # email: shawnpope@gmail.com
 
-library(RCurl)
-library(XML)
-library(tis)
-library(quantmod)
-library(RQuantLib)
-library(zoo)
-library(timeDate)
 
 # greeks(488.59,490,0.04,0.025,23,.3)
 
@@ -136,88 +129,47 @@ return.option<-function(ticker){
   return(list(calls=calls, puts=puts))
 }
 
-
-data<-return.option("AAPL")
-calls<-data$calls[data$calls$calls.OI>10,]
-#subset within 5 percent of current share price
-percent.near=0.05
-calls<-subset(calls, calls.Strike>=Last-percent.near*Last & calls.Strike<=Last+percent.near*Last)
-head(calls, 10)
-
-days.expire<-as.integer(option.expire-Sys.Date())
-
-puts<-data$puts[data$puts$puts.OI>10,]
-puts<-data$puts[complete.cases(data$puts),]
-# filter on near the money
-calls$Moneyness/calls$Last
-
-head(calls)
-head(puts)
+process.option<-function(data, percent.near){
+  
+  cat("Raw number of calls: ", nrow(data$calls), "\n")
+  cat("Raw number of puts: ", nrow(data$puts), "\n")
+  calls<-data$calls[data$calls$calls.OI>10,]
+  calls<-subset(calls, calls.Strike>=Last-percent.near*Last & calls.Strike<=Last+percent.near*Last)
+  # subset on 5% return
+  calls<-subset(calls, Ann.Profit>=5)
+  cat("Number of calls that fit criteria:", nrow(calls), "\n")
+  
+  
+  puts<-data$puts[data$puts$puts.OI>10,]
+  puts<-data$puts[complete.cases(data$puts),]
+  cat("Number of puts that fit criteria:", nrow(puts), "\n")
+  
+  
+  # filter on near the money
+  # calls$Moneyness/calls$Last
+    
+  return(list(calls=calls, puts=puts))
+         
+}
 
 # subset on near the money -+ 20% of Last.Price
 # select upcoming options and ones near the money
 
 
 # Calculate Implied Volatility - need to compare against actual vol (30days prices)
-T=as.numeric(as.Date(calls$Friday.date[100], format="%Y-%m-%d")-Sys.Date())
-S=calls$Stock.Price[100]
-K=calls$calls.Strike[100]
-K=100
-r=0.0025
-market=calls$calls.Last[100]
-type="C"
+# T=as.numeric(as.Date(calls$Friday.date[100], format="%Y-%m-%d")-Sys.Date())
+# S=calls$Stock.Price[100]
+# K=calls$calls.Strike[100]
+# K=100
+# r=0.0025
+# market=calls$calls.Last[100]
+# type="C"
 
 # apply function across all rows
-implied.vol(S, K, days, r, market, type)
+# implied.vol(S, K, days, r, market, type)
 
 
-
-data<-return.option("AA")
-calls<-data$calls
-puts<-data$puts
-
-
-
-#--------------------------------------------------------
-# Plot some stuff
-
-
-plot(options$calls$Strike, options$calls$Last, type="l", col=2)
-points(next.options$calls$Strike, next.options$calls$Last, type="l", col=3)
-
-total<-do.call(rbind, lapply(aapl_total, function(x) do.call(rbind, x)))
 
 #strsplit(rownames(total)[1], ".")[[1]]
-write.table(total, 'data_total.txt', sep=" ")
+# write.table(total, 'data_total.txt', sep=" ")
 
-
-# Return the At the Money Call
-for (x in 1:length(stock.list)) {
-  
-  price.last<-getQuote(stock.list[x], src="yahoo")$Last
-  calls<-getOptionChain(stock.list[x])$calls
-  atm.call<-calls[which.min(abs(price.last-calls$Strike)),]$Last
-  strike.price<-calls[which.min(abs(price.last-calls$Strike)),]$Strike
-  days.expire<-as.integer(option.expire-Sys.Date())
-  
-  #calculate intrinsic value
-  if(strike.price>price.last){
-    intrinsic.val<-atm.call
-  } else {intrinsic.val<-atm.call + strike.price - price.last}
-  
-  cat("--------------------\n")
-  cat(stock.list[x],"\n")
-  cat("Last Price: ", price.last, "\n")
-  cat("Strike Price: ", strike.price, "\n")
-  cat(stock.list[x], "ATM Call: ", atm.call, "\n")
-  cat("Expire(days): ", days.expire , "\n")
-  cat("Intrinsic Value: ", intrinsic.val, "\n")
-  cat("Extrinsic Value: ", atm.call-intrinsic.val, "\n")
-  
-  # fixed the percentage based on intrinsic value
-  cat("% called     : ", (1+intrinsic.val/strike.price)^(365/days.expire) - 1 , "\n")
-  cat("% not called : ", (1+intrinsic.val/price.last)^(365/days.expire) - 1 , "\n")
-  
-  cat("--------------------\n")
-  
-}
