@@ -15,7 +15,7 @@ source("options.R")
 # functions include BS(), implied.vol(), return.option()
 
 opt.example<-return.option("AAPL") # -> returns data$calls, data$puts
-output<-process.option(data, 0.05)
+output<-process.option(opt.example, 0.03) # first input is how near the strike price, need to add a days expire input
 
 # near the money option data
 output$calls
