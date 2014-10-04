@@ -1,6 +1,13 @@
 # Define the portfolio Holding
 # need to fully develop this more
 
+# need to add sector analysis
+
+# sector ETF's
+tickers = spl('XLY,XLP,XLE,XLF,XLV,XLI,XLB,XLK,XLU')
+tickers.desc = spl('ConsumerCyclicals,ConsumerStaples,Energy,Financials,HealthCare,Industrials,Materials,Technology,Utilities')
+
+
 
 portfolio <- data.frame(ticker = character(0), shares = numeric(0), stringsAsFactors=F)
 
