@@ -20,27 +20,17 @@ process.fin.data<-function(stock){
     return(final.data)
 }
 
-# PASS A VECTOR OF STOCKS
-output<-rbind(process.fin.data("AAPL"),
-              process.fin.data("BAX"),
-              process.fin.data("DE"),
-              process.fin.data("JNK"),
-              process.fin.data("IP"),
-              process.fin.data("PG"),
-              process.fin.data("AMZN"),
-              process.fin.data("MCD"),
-              process.fin.data("F"),
-              process.fin.data("JNJ"),
-              process.fin.data("BMY"),
-              process.fin.data("SIRI"),
-              process.fin.data("KO"),
-              process.fin.data("XLF"),
-              process.fin.data("XLV"),
-              process.fin.data("XLE"),
-              process.fin.data("XLB")
-              )
 
-rownames(output)<-c("AAPL", "BAX", "DE", "JNK", "IP", "PG", 
-                    "AMZN", "MCD", "F", "JNJ", "BMY","SIRI", "KO", "XLF", "XLV", "XLE", "XLB")
+# PASS A VECTOR OF STOCKS
+output<-data.frame()
+for (i in 1:nrow(portfolio)){
+  ticker=portfolio[i,1]
+  output<-rbind(output,process.fin.data(ticker) )
+  
+}
+
+
+rownames(output)<-portfolio[,1]
+
 
 print(xtable(output), type="html", file="example.html")
