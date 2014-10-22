@@ -6,9 +6,16 @@
 setwd("/Users/shawnpope/Desktop/stocks")
 
 # Scripts
+rm(list=ls())
 source("load.packages.R")
 source("portfolio.holdings.R") # defines the table with holdings and position sizes
+source("download.R")
+source("process.R")
+Risk.table
+CAPM.table
+Fundamental.table
 
+# Should I incorporate FINVIZ scrape
 source("finviz.scrape.R") # scrapes finviz.com for stock/etf info
 # returns a df called output - use this to get financial information - not a price source
 
